@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DP-600 Simulador de Examen</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e3a5f;
+    --accent: #00c2ff;
+    --accent2: #7c3aed;
+    --correct: #10b981;
+    --wrong: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --gold: #f59e0b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image: 
+      radial-gradient(ellipse at 20% 0%, rgba(0,194,255,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(124,58,237,0.08) 0%, transparent 50%);
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(17,24,39,0.8);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .logo span { color: var(--muted); }
+
+  .timer-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    color: var(--gold);
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    padding: 6px 16px;
+    border-radius: 6px;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+
+  /* SCREENS */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* HOME */
+  .hero {
+    text-align: center;
+    padding: 60px 0 40px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    font-size: 18px;
+    color: var(--muted);
+    margin-bottom: 48px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+
+  .domains-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .domain-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 20px;
+    text-align: left;
+    transition: border-color 0.2s;
+  }
+
+  .domain-card:hover { border-color: var(--accent); }
+
+  .domain-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .domain-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .domain-qs {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .mode-selector {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+
+  .mode-btn {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    color: var(--text);
+    padding: 16px 28px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.2s;
+    min-width: 180px;
+  }
+
+  .mode-btn:hover, .mode-btn.selected {
+    border-color: var(--accent);
+    background: rgba(0,194,255,0.08);
+    color: var(--accent);
+  }
+
+  .mode-btn .icon { font-size: 20px; display: block; margin-bottom: 6px; }
+
+  .start-btn {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    border: none;
+    padding: 18px 56px;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .start-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* QUIZ */
+  .quiz-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    flex-wrap: gap;
+    gap: 12px;
+  }
+
+  .progress-wrap {
+    flex: 1;
+    max-width: 400px;
+  }
+
+  .progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 6px;
+  }
+
+  .progress-bar {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  .domain-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(0,194,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,194,255,0.3);
+  }
+
+  .domain-tag.d2 {
+    background: rgba(124,58,237,0.1);
+    color: #a78bfa;
+    border-color: rgba(124,58,237,0.3);
+  }
+  .domain-tag.d3 {
+    background: rgba(16,185,129,0.1);
+    color: #34d399;
+    border-color: rgba(16,185,129,0.3);
+  }
+
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px;
+    margin-bottom: 24px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .q-type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .q-text {
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--text);
+    margin-bottom: 28px;
+    font-weight: 400;
+  }
+
+  .q-scenario {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #94a3b8;
+    margin-bottom: 24px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 20px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+    text-align: left;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .option:hover:not(.disabled) {
+    border-color: var(--accent);
+    background: rgba(0,194,255,0.05);
+  }
+
+  .option.selected { border-color: var(--accent); background: rgba(0,194,255,0.08); }
+  .option.correct { border-color: var(--correct); background: rgba(16,185,129,0.1); color: #34d399; }
+  .option.wrong { border-color: var(--wrong); background: rgba(239,68,68,0.1); color: #fca5a5; }
+  .option.reveal-correct { border-color: var(--correct); background: rgba(16,185,129,0.05); }
+  .option.disabled { cursor: default; }
+
+  .option-key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: var(--surface2);
+    color: var(--muted);
+    flex-shrink: 0;
+    margin-top: 1px;
+    transition: all 0.15s;
+  }
+
+  .option.selected .option-key { background: var(--accent); color: white; }
+  .option.correct .option-key { background: var(--correct); color: white; }
+  .option.wrong .option-key { background: var(--wrong); color: white; }
+
+  .explanation {
+    margin-top: 20px;
+    padding: 20px 24px;
+    background: var(--surface2);
+    border-radius: 10px;
+    border-left: 4px solid var(--correct);
+    animation: fadeIn 0.3s ease;
+    display: none;
+  }
+
+  .explanation.show { display: block; }
+  .explanation.wrong-exp { border-left-color: var(--wrong); }
+
+  .exp-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--correct);
+    margin-bottom: 10px;
+  }
+
+  .exp-title.wrong-exp { color: var(--wrong); }
+
+  .exp-text {
+    font-size: 14px;
+    line-height: 1.65;
+    color: #94a3b8;
+  }
+
+  .multi-note {
+    font-size: 13px;
+    color: var(--gold);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: rgba(245,158,11,0.08);
+    border-radius: 6px;
+    border: 1px solid rgba(245,158,11,0.2);
+  }
+
+  .actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .btn {
+    padding: 13px 28px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .btn-primary:hover { background: #00aadd; }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-check {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+  }
+
+  .btn:disabled { opacity: 0.4; cursor: default; }
+
+  .score-chips {
+    display: flex;
+    gap: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  .chip-correct { color: var(--correct); }
+  .chip-wrong { color: var(--wrong); }
+
+  /* RESULTS */
+  .results-hero {
+    text-align: center;
+    padding: 60px 0 40px;
+  }
+
+  .score-circle {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    margin: 0 auto 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .score-circle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    padding: 3px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  .score-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .score-label { font-size: 12px; color: var(--muted); }
+
+  .verdict {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .verdict-sub { font-size: 16px; color: var(--muted); margin-bottom: 40px; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .stat-label { font-size: 13px; color: var(--muted); }
+
+  .review-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 40px; }
+
+  .review-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .review-icon { font-size: 18px; flex-shrink: 0; }
+  .review-domain { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
+
+  .restart-btn {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    border: none;
+    padding: 16px 48px;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: block;
+    margin: 0 auto;
+    transition: opacity 0.2s;
+  }
+
+  .restart-btn:hover { opacity: 0.9; }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 32px; }
+    .domains-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr; }
+    header { padding: 16px 20px; }
+    .question-card { padding: 24px 20px; }
+    .mode-btn { min-width: 140px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">DP<span>-</span>600 <span>// Microsoft Fabric</span></div>
+  <a href="https://www.linkedin.com/in/rafael-alberto-milanes-hernandez/" target="_blank"
+     title="Ver perfil de LinkedIn"
+     style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;transition:filter 0.2s;"
+     onmouseover="this.style.filter='drop-shadow(0 0 8px rgba(10,102,194,0.9))'"
+     onmouseout="this.style.filter='none'">
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 72 72"
+         style="filter:drop-shadow(0 0 4px rgba(10,102,194,0.6));border-radius:6px;flex-shrink:0;">
+      <rect width="72" height="72" rx="8" fill="#0A66C2"/>
+      <path fill="white" d="M13.5 26h9v33h-9zM18 22a5 5 0 1 1 0-10 5 5 0 0 1 0 10zM30 26h8.6v4.5h.1c1.2-2.3 4.2-4.7 8.6-4.7 9.2 0 10.9 6 10.9 13.9V59h-9V41.4c0-3.4-.1-7.7-4.7-7.7-4.7 0-5.4 3.7-5.4 7.4V59H30V26z"/>
+    </svg>
+    <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#e2e8f0;line-height:1.3;">Rafael Milanes Hernandez</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#64748b;margin-top:2px;cursor:pointer;display:flex;align-items:center;gap:4px;"
+           onclick="var t=this.querySelector('span');t.textContent=t.textContent.includes('+57')?'Colombia':'+57 317 5362404'"
+           title="+57 317 5362404">
+        <svg width="16" height="11" viewBox="0 0 3 2" style="flex-shrink:0;border-radius:2px;">
+          <rect width="3" height="2" fill="#FCD116"/>
+          <rect y="1" width="3" height="0.5" fill="#003087"/>
+          <rect y="1.5" width="3" height="0.5" fill="#CE1126"/>
+        </svg>
+        <span>Colombia</span>
+      </div>
+  </a>
+  <div class="timer-badge" id="timerDisplay">⏱ 00:00</div>
+</header>
+
+<div class="container">
+
+  <!-- HOME SCREEN -->
+  <div class="screen active" id="homeScreen">
+    <div class="hero">
+      <div class="badge">Simulador de Práctica</div>
+      <h1><em>Microsoft Fabric Analytics<br>Engineer Associate</em></h1>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:700;letter-spacing:4px;margin-bottom:8px;background:linear-gradient(135deg,#00c2ff,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">DP-600</p>
+      <p class="subtitle">40 preguntas de práctica que cubre los 3 temas que corresponden a:</p>
+    </div>
+
+    <div class="domains-grid">
+      <div class="domain-card">
+        <div class="domain-pct">25–30%</div>
+        <div class="domain-name">Dominio 1: Mantener una solución de análisis de datos</div>
+        <div class="domain-qs">14 preguntas</div>
+      </div>
+      <div class="domain-card">
+        <div class="domain-pct">45–50%</div>
+        <div class="domain-name">Dominio 2: Preparar datos</div>
+        <div class="domain-qs">16 preguntas</div>
+      </div>
+      <div class="domain-card">
+        <div class="domain-pct">25–30%</div>
+        <div class="domain-name">Dominio 3: Implementar y gestionar modelos semánticos</div>
+        <div class="domain-qs">10 preguntas</div>
+      </div>
+    </div>
+
+    <div class="mode-selector">
+      <button class="mode-btn selected" onclick="selectMode('exam')" id="modeExam">
+        <span class="icon">🎯</span>Modo Examen<br><small style="font-size:12px;color:var(--muted)">Sin ayuda, temporizador</small>
+      </button>
+      <button class="mode-btn" onclick="selectMode('practice')" id="modePractice">
+        <span class="icon">📚</span>Modo Práctica<br><small style="font-size:12px;color:var(--muted)">Con explicaciones</small>
+      </button>
+    </div>
+
+    <button class="start-btn" onclick="startQuiz()">Iniciar Simulacro →</button>
+  </div>
+
+  <!-- QUIZ SCREEN -->
+  <div class="screen" id="quizScreen">
+    <div class="quiz-header">
+      <div class="progress-wrap">
+        <div class="progress-labels">
+          <span id="qCounter">Pregunta 1 de 40</span>
+          <span id="pctLabel">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      </div>
+      <span class="domain-tag" id="domainTag">Dominio 1</span>
+      <div class="score-chips">
+        <span class="chip-correct">✓ <span id="scoreCorrect">0</span></span>
+        <span class="chip-wrong">✗ <span id="scoreWrong">0</span></span>
+      </div>
+    </div>
+
+    <div class="question-card" id="questionCard">
+      <!-- dynamic content -->
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="skipQuestion()" id="skipBtn">Saltar →</button>
+      <button class="btn btn-check" onclick="checkAnswer()" id="checkBtn">Verificar respuesta</button>
+      <button class="btn btn-primary" onclick="nextQuestion()" id="nextBtn" style="display:none">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- RESULTS SCREEN -->
+  <div class="screen" id="resultsScreen">
+    <div class="results-hero">
+      <div class="score-circle">
+        <div class="score-num" id="finalPct">0%</div>
+        <div class="score-label">Score</div>
+      </div>
+      <div class="verdict" id="verdictText">Excelente</div>
+      <div class="verdict-sub" id="verdictSub">Aprobado con distinción</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num" id="statCorrect" style="color:var(--correct)">0</div>
+        <div class="stat-label">Correctas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="statWrong" style="color:var(--wrong)">0</div>
+        <div class="stat-label">Incorrectas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="statTime" style="color:var(--gold)">0m</div>
+        <div class="stat-label">Tiempo usado</div>
+      </div>
+    </div>
+
+    <h3 style="margin-bottom:16px;font-size:16px;color:var(--muted)">REVISIÓN DE RESPUESTAS</h3>
+    <div class="review-list" id="reviewList"></div>
+    <button class="restart-btn" onclick="restart()">Intentar de nuevo →</button>
+  </div>
+
+</div>
+
+<script>
+const questions = [
+  // ===== DOMINIO 1: MANTENER LA SOLUCIÓN (25-30%) =====
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "Tienes un workspace de Fabric. Necesitas asegurarte de que los usuarios de un grupo solo puedan leer datos del lakehouse y warehouse usando SQL endpoints, pero siguiendo el principio de mínimo privilegio. ¿Qué rol de workspace debes asignar al grupo?",
+    options: ["Admin", "Member", "Contributor", "Viewer"],
+    correct: [3],
+    explanation: "El rol Viewer permite leer datos mediante SQL endpoints sin otorgar permisos de edición o administración. Es el mínimo privilegio necesario para este caso."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "Necesitas asegurarte de que los modelos semánticos y reportes del departamento de investigación usen control de versiones que soporte branching. ¿Qué debes hacer?",
+    options: [
+      "Almacenar los modelos en Data Lake Gen2",
+      "Configurar los workspaces para usar un repositorio GitHub",
+      "Configurar los workspaces para usar un repositorio Azure Repos",
+      "Almacenar los archivos en Microsoft OneDrive"
+    ],
+    correct: [2],
+    explanation: "Azure Repos (parte de Azure DevOps) soporta branching y está integrado de forma nativa con Microsoft Fabric para control de versiones. GitHub también soporta branching pero Azure Repos es la opción oficial de Microsoft para integración con Fabric workspaces."
+  },
+  {
+    domain: 1,
+    type: "Caso de aplicación",
+    scenario: "Una empresa tiene modelos semánticos en Import mode. Quieren minimizar las filas agregadas durante las actualizaciones de la tabla Orders.",
+    text: "¿Qué tipo de actualización debes configurar para minimizar las filas procesadas en cada refresh?",
+    options: ["Full Refresh", "Incremental Refresh", "Scheduled Refresh con DirectQuery", "Manual Refresh"],
+    correct: [1],
+    explanation: "El Incremental Refresh (actualización incremental) solo carga los datos nuevos o modificados desde el último refresh, minimizando el número de filas procesadas y reduciendo el tiempo y costo de actualización."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "¿Cuál de los siguientes controles de acceso se puede implementar en Microsoft Fabric para restringir el acceso a filas específicas de datos en un modelo semántico?",
+    options: ["Sensitivity Labels", "Row-Level Security (RLS)", "Deployment Pipelines", "Endorsement"],
+    correct: [1],
+    explanation: "Row-Level Security (RLS) permite definir filtros DAX que restringen qué filas puede ver cada usuario o rol en el modelo semántico, sin cambiar el modelo subyacente."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "Necesitas implementar control de acceso a nivel de columnas en un warehouse de Fabric. ¿Cuál es la forma correcta de hacerlo?",
+    options: [
+      "Crear vistas que excluyan las columnas sensibles",
+      "Usar Column-Level Security con GRANT/DENY en T-SQL",
+      "Configurar Object-Level Security en el modelo semántico",
+      "Aplicar Sensitivity Labels a las columnas"
+    ],
+    correct: [1, 2],
+    explanation: "En Fabric Warehouse se puede usar Column-Level Security con T-SQL (DENY SELECT on column). En modelos semánticos, Object-Level Security (OLS) en Tabular Editor permite ocultar columnas/tablas a roles específicos."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "¿Qué herramienta de Fabric permite gestionar el ciclo de vida de desarrollo (dev → test → prod) de semantic models, lakehouses y warehouses?",
+    options: ["Azure DevOps", "Deployment Pipelines", "Power BI Desktop Projects (.pbip)", "XMLA Endpoint"],
+    correct: [1],
+    explanation: "Los Deployment Pipelines de Fabric permiten promover artefactos a través de etapas (Development, Test, Production) de forma controlada y visual."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "Necesitas hacer un análisis de impacto antes de eliminar una columna de un lakehouse. ¿Qué funcionalidad de Fabric debes usar?",
+    options: [
+      "Lineage view en el workspace",
+      "Impact Analysis desde el menú de opciones del lakehouse",
+      "DAX Studio para rastrear dependencias",
+      "Power BI Desktop Model View"
+    ],
+    correct: [1],
+    explanation: "La función Impact Analysis en Fabric muestra qué reportes, modelos semánticos, dataflows y otros elementos dependientes se verían afectados por cambios en el elemento seleccionado."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "Quieres desplegar un modelo semántico personalizado Direct Lake desde una herramienta externa. ¿Qué debe estar habilitado en el portal de Administración de Fabric?",
+    options: [
+      "Publish to Web",
+      "XMLA Endpoint en Read Write en Capacity Settings",
+      "Allow Azure AD guest users",
+      "Enable Fabric items para todos los usuarios"
+    ],
+    correct: [1],
+    explanation: "Para crear y publicar modelos semánticos Direct Lake desde herramientas externas como Tabular Editor o SSMS, el XMLA Endpoint debe estar configurado en modo Read/Write en la configuración de la capacidad de Fabric."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "¿Cuál es la diferencia principal entre un archivo .pbix y un proyecto Power BI Desktop (.pbip)?",
+    options: [
+      ".pbip es un archivo binario comprimido; .pbix es texto plano",
+      ".pbip almacena el modelo y reportes como archivos de texto plano compatibles con control de versiones; .pbix es binario",
+      ".pbip solo funciona en Fabric; .pbix funciona en modo local",
+      "No hay diferencia funcional, solo el nombre de extensión"
+    ],
+    correct: [1],
+    explanation: "El formato .pbip (Power BI Project) almacena el modelo semántico y los reportes como archivos JSON/texto plano, lo que permite un control de versiones efectivo con Git. El .pbix es un archivo binario que dificulta las comparaciones en control de versiones."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "¿Qué significa 'endorse' un item en Microsoft Fabric y por qué es importante?",
+    options: [
+      "Cifrar el item con llaves de Microsoft",
+      "Marcar el item como Promoted o Certified para indicar confiabilidad a otros usuarios",
+      "Publicar el item en AppSource",
+      "Compartir el item con usuarios externos"
+    ],
+    correct: [1],
+    explanation: "Endorse (respaldar) un item lo marca como Promoted (promovido por el propietario) o Certified (certificado por un administrador), indicando a otros usuarios que el contenido es confiable y de calidad."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "Necesitas agrupar workspaces del departamento de Research para que los usuarios puedan filtrarlos en OneLake Data Hub por nombre de departamento. ¿Qué debes configurar?",
+    options: [
+      "Asignar los workspaces al mismo grupo de Microsoft Entra",
+      "Crear una Fabric Domain y asignar los workspaces a ella",
+      "Usar el mismo prefijo en el nombre de los workspaces",
+      "Habilitar OneLake Catalog para los workspaces"
+    ],
+    correct: [1],
+    explanation: "Las Fabric Domains permiten agrupar workspaces lógicamente. Los usuarios pueden filtrar por dominio en OneLake Data Hub y Catalog para encontrar contenido de departamentos específicos."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "¿Cuál capacidad de Fabric ofrece facturación por minuto (per-minute billing) bajo demanda?",
+    options: ["Fabric F64 Reserved", "Pay-as-you-go con Fabric Trial", "Microsoft Fabric Burst capacity", "Fabric on Demand / Pay-per-use (Fabric Trial) con auto-scale"],
+    correct: [3],
+    explanation: "La capacidad Fabric Pay-as-you-go permite escalar y pagar por minuto sin compromisos a largo plazo. Es ideal para cargas de trabajo irregulares como el departamento de investigación del escenario típico del examen."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "Un sensitivity label aplicado a un lakehouse en Fabric, ¿qué efecto tiene sobre los reportes que consumen ese lakehouse?",
+    options: [
+      "Los reportes se encriptan automáticamente",
+      "El label se hereda automáticamente en los items downstream como modelos semánticos y reportes",
+      "Los reportes quedan inaccesibles para usuarios externos",
+      "El label no se propaga; debe aplicarse manualmente en cada item"
+    ],
+    correct: [1],
+    explanation: "En Microsoft Fabric, los sensitivity labels se propagan automáticamente (herencia de labels) desde los datos de origen hacia los items downstream, reduciendo el esfuerzo de clasificación manual."
+  },
+  {
+    domain: 1,
+    type: "Selección múltiple",
+    text: "¿Cuál es la diferencia entre Row-Level Security (RLS) y Object-Level Security (OLS) en modelos semánticos de Fabric?",
+    options: [
+      "RLS controla filas visibles por usuario; OLS controla qué tablas/columnas son visibles",
+      "RLS es solo para warehouses; OLS es solo para lakehouses",
+      "OLS controla filas; RLS controla columnas",
+      "Son equivalentes, solo tienen nombres distintos en diferentes contextos"
+    ],
+    correct: [0],
+    explanation: "RLS filtra las filas que un rol de usuario puede ver mediante expresiones DAX. OLS (Object-Level Security) controla si ciertas tablas o columnas son visibles para roles específicos, ocultando la existencia misma del objeto."
+  },
+
+  // ===== DOMINIO 2: PREPARAR DATOS (45-50%) =====
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "Tienes un Fabric tenant con archivos CSV en Amazon S3. Quieres consultarlos usando el SQL endpoint de un lakehouse. ¿Qué formato de archivo y dónde debes crear el shortcut?",
+    options: [
+      "CSV en la sección Tables del lakehouse",
+      "Delta en la sección Files del lakehouse",
+      "Delta en la sección Tables del lakehouse",
+      "Parquet en la sección Files del lakehouse"
+    ],
+    correct: [2],
+    explanation: "El SQL endpoint solo puede consultar tablas en formato Delta. El shortcut debe crearse en la sección Tables del lakehouse para que sea accesible mediante SQL. Los archivos CSV deben convertirse primero a formato Delta."
+  },
+  {
+    domain: 2,
+    type: "Caso de aplicación",
+    scenario: "storage1 contiene datos en formato Delta. En Lakehouse1 se creó un shortcut llamado ResearchProduct. El código en un notebook de Spark necesita acceder a estos datos.",
+    text: "¿Cuál es la sintaxis correcta en el notebook para leer los datos de Productline1 desde el shortcut ResearchProduct?",
+    options: [
+      "spark.read.format('delta').load('Tables/productline1/ResearchProduct')",
+      "spark.read.format('delta').load('abfss://storage1@ResearchProduct')",
+      "spark.read.format('csv').load('Files/ResearchProduct')",
+      "spark.sql('SELECT * FROM ResearchProduct')"
+    ],
+    correct: [0],
+    explanation: "Al crear un shortcut en la sección Tables del lakehouse, los datos son accesibles en Spark usando la ruta relativa 'Tables/[shortcut_name]'. El formato delta es correcto ya que storage1 contiene datos en formato Delta."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "¿Cuándo debes elegir un Warehouse en lugar de un Lakehouse en Microsoft Fabric?",
+    options: [
+      "Cuando necesitas procesar datos semiestructurados con notebooks de Spark",
+      "Cuando requieres soporte completo de T-SQL, transacciones ACID y consistencia para datos estructurados",
+      "Cuando trabajas exclusivamente con datos en tiempo real (streaming)",
+      "Cuando necesitas almacenar archivos en múltiples formatos como JSON y XML"
+    ],
+    correct: [1],
+    explanation: "El Fabric Warehouse está optimizado para cargas de trabajo SQL tradicionales: soporte completo de T-SQL, transacciones, integridad referencial y esquemas bien definidos. El Lakehouse es mejor para procesamiento a escala con Spark sobre datos semiestructurados o no estructurados."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "Tienes un lakehouse con una tabla Delta llamada Customer y las consultas son lentas. Sospechas que no se realizó mantenimiento. ¿Qué comando de Spark SQL debes ejecutar para verificar si se realizaron operaciones de mantenimiento?",
+    options: [
+      "DESCRIBE DETAIL customer",
+      "DESCRIBE HISTORY customer",
+      "SHOW TABLE EXTENDED customer",
+      "OPTIMIZE customer VACUUM"
+    ],
+    correct: [1],
+    explanation: "DESCRIBE HISTORY muestra el historial de operaciones de la tabla Delta, incluyendo OPTIMIZE y VACUUM. Permite verificar cuándo y si se realizó mantenimiento. DESCRIBE DETAIL muestra metadata actual pero no el historial."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "Un DataFrame grande en Spark se guarda con el siguiente código: df.write.partitionBy('year','month','day').mode('overwrite').parquet('Files/SalesOrder'). ¿Cuál afirmación es correcta sobre el resultado?",
+    options: [
+      "Los datos quedan automáticamente disponibles como tabla Delta en Lakehouse explorer",
+      "Los datos se guardan como archivos Parquet en la sección Files, NO como tabla gestionada en Lakehouse explorer",
+      "El método partitionBy requiere formato Delta para funcionar",
+      "Los datos se almacenan en OneLake pero no son accesibles por SQL endpoint"
+    ],
+    correct: [1],
+    explanation: "Al escribir en la sección Files con formato Parquet (no Delta), los datos no aparecen automáticamente como tablas gestionadas en Lakehouse explorer. Para que aparezcan como tablas, debes escribir en la sección Tables con formato Delta o registrar la tabla manualmente."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "Para convertir archivos CSV de una subcarpeta en formato Delta con optimización V-Order habilitada usando Lakehouse explorer, ¿qué debes hacer?",
+    options: [
+      "Usar la función 'Load to Tables' en Lakehouse explorer",
+      "Crear un shortcut en la sección Tables",
+      "Usar el comando OPTIMIZE en Spark SQL",
+      "Crear un Dataflow Gen2 para la conversión"
+    ],
+    correct: [0],
+    explanation: "La función 'Load to Tables' en Lakehouse explorer convierte archivos CSV u otros formatos en tablas Delta con V-Order optimization habilitada por defecto, sin necesidad de código."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "¿Cuál es la diferencia entre OneLake Catalog y Real-Time Hub en Microsoft Fabric para descubrimiento de datos?",
+    options: [
+      "OneLake Catalog descubre datos almacenados (batch); Real-Time Hub descubre datos en streaming en tiempo real",
+      "OneLake Catalog es solo para lakehouses; Real-Time Hub es solo para warehouses",
+      "Real-Time Hub reemplaza a OneLake Catalog en las versiones más recientes de Fabric",
+      "Son equivalentes y se usan de forma intercambiable"
+    ],
+    correct: [0],
+    explanation: "OneLake Catalog permite descubrir y explorar datos almacenados en lakehouses, warehouses y otras fuentes batch en Fabric. Real-Time Hub es para descubrir, conectar y monitorear fuentes de datos en streaming como Eventstream y KQL databases."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "¿Cuándo debes usar un Eventhouse en lugar de un Lakehouse en Fabric?",
+    options: [
+      "Cuando los datos son principalmente históricos y estáticos",
+      "Cuando necesitas análisis en tiempo real sobre series de tiempo y logs con KQL",
+      "Cuando los datos provienen exclusivamente de Azure SQL Database",
+      "Cuando el volumen de datos es menor a 1 TB"
+    ],
+    correct: [1],
+    explanation: "El Eventhouse (que contiene KQL Databases) está optimizado para análisis de series de tiempo, logs, telemetría y datos en tiempo real usando Kusto Query Language (KQL). Es ideal para escenarios de monitoreo IoT, análisis de logs y datos de streaming."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "Necesitas implementar un esquema en estrella en un lakehouse de Fabric. ¿Qué afirmación es correcta?",
+    options: [
+      "El lakehouse no soporta esquemas en estrella; debes usar un warehouse",
+      "Puedes implementar el esquema en estrella creando tablas Delta separadas para dimensiones y hechos",
+      "Las restricciones de foreign key se aplican automáticamente en el lakehouse",
+      "El esquema en estrella solo se puede crear usando el Visual Query Editor"
+    ],
+    correct: [1],
+    explanation: "Los lakehouses de Fabric soportan esquemas en estrella creando tablas Delta separadas para dimensiones (dim_*) y hechos (fact_*). Las relaciones lógicas se definen luego en el modelo semántico de Power BI. Las restricciones de FK son informativas, no se aplican como en bases de datos relacionales."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "Estás usando Dataflow Gen2 en Fabric y necesitas identificar los valores mínimo y máximo de cada columna en 500 filas de resultados. ¿Qué opciones debes habilitar en la vista de datos?",
+    options: [
+      "Show column quality details",
+      "Show column value distribution",
+      "Show column profile",
+      "Enable data preview mode"
+    ],
+    correct: [0, 1],
+    explanation: "En Dataflow Gen2, 'Show column quality details' muestra estadísticas de calidad (nulos, errores, válidos) y 'Show column value distribution' muestra la distribución de valores incluyendo mínimos y máximos. Ambas opciones son necesarias para obtener esta información."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "¿Qué es V-Order optimization en el contexto de tablas Delta en Microsoft Fabric?",
+    options: [
+      "Un algoritmo de compresión que reduce el tamaño de los archivos Delta en disco",
+      "Una optimización de escritura que mejora el rendimiento de lectura posterior en el motor de Microsoft Fabric",
+      "Un índice adicional que acelera las consultas SQL sobre tablas Delta",
+      "Un proceso de particionamiento automático de tablas grandes"
+    ],
+    correct: [1],
+    explanation: "V-Order es una optimización de escritura propietaria de Microsoft que aplica ordenamiento especial, codificación y compresión a los archivos Delta Parquet, resultando en lecturas hasta 10x más rápidas en el motor Fabric. Se aplica automáticamente cuando se usa 'Load to Tables' o se escribe via Spark en Fabric."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "Necesitas denormalizar datos en un lakehouse para optimizar el rendimiento de reportes. ¿Cuál es la razón principal para denormalizar en el contexto de Fabric Analytics?",
+    options: [
+      "Para eliminar la necesidad de DAX en el modelo semántico",
+      "Para reducir la cantidad de JOINs en consultas frecuentes, mejorando el rendimiento de lectura",
+      "Para cumplir con las formas normales requeridas por el SQL endpoint",
+      "Para reducir el espacio de almacenamiento en OneLake"
+    ],
+    correct: [1],
+    explanation: "La denormalización combina datos de múltiples tablas en una sola, reduciendo la necesidad de JOINs costosos en consultas frecuentes. Es común en capas de datos analíticos (gold layer) donde el rendimiento de lectura es prioritario sobre la eficiencia de escritura."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "¿Cuál query de KQL selecciona los últimos 100 eventos de temperatura superiores a 25°C de la tabla 'SensorData' en un Eventhouse?",
+    options: [
+      "SensorData | where temperature > 25 | take 100",
+      "SELECT TOP 100 * FROM SensorData WHERE temperature > 25",
+      "SensorData | filter temperature > 25 | limit 100",
+      "SensorData | top 100 by ingestion_time | where temperature > 25"
+    ],
+    correct: [0],
+    explanation: "KQL (Kusto Query Language) usa el operador 'where' para filtrar y 'take' para limitar resultados. La sintaxis correcta es: tabla | operador | operador. 'SELECT' es T-SQL, no KQL."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "¿Cuál es el propósito de VACUUM en tablas Delta de un lakehouse?",
+    options: [
+      "Compactar archivos pequeños en archivos más grandes (file compaction)",
+      "Eliminar archivos de versiones antiguas que ya no son necesarios, liberando espacio de almacenamiento",
+      "Actualizar las estadísticas de columna para mejorar el rendimiento del query optimizer",
+      "Convertir archivos Parquet al formato Delta V-Order"
+    ],
+    correct: [1],
+    explanation: "VACUUM elimina los archivos históricos de versiones antiguas de una tabla Delta que ya no están dentro del período de retención (por defecto 7 días). Libera espacio de almacenamiento pero limita el time travel a versiones anteriores al período de retención."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "En un Visual Query Editor de Fabric, quieres agregar ventas por región y mes. ¿Qué transformación debes aplicar?",
+    options: [
+      "Merge queries by Region y Month",
+      "Group By con funciones de agregación (SUM, COUNT)",
+      "Pivot columnas por Month",
+      "Append queries para combinar los datos"
+    ],
+    correct: [1],
+    explanation: "La operación Group By en el Visual Query Editor permite agrupar filas por columnas específicas (Region, Month) y aplicar funciones de agregación (SUM, COUNT, AVG, etc.) para calcular métricas resumidas."
+  },
+  {
+    domain: 2,
+    type: "Selección múltiple",
+    text: "¿Cuál es la diferencia entre OneLake Shortcut y OneLake Integration para Eventhouse?",
+    options: [
+      "No hay diferencia; ambos crean shortcuts en OneLake",
+      "OneLake Shortcuts crean accesos directos a datos externos sin moverlos; OneLake Integration de Eventhouse replica datos del KQL Database a OneLake en formato Delta automáticamente",
+      "OneLake Integration es solo para datos en tiempo real; Shortcuts son para datos históricos",
+      "OneLake Integration requiere una capacidad F64 o superior"
+    ],
+    correct: [1],
+    explanation: "OneLake Integration para Eventhouse crea automáticamente una copia de los datos del KQL Database en OneLake como archivos Delta, permitiendo que otros servicios de Fabric (como Lakehouse y modelos semánticos) consuman esos datos sin moverlos manualmente."
+  },
+
+  // ===== DOMINIO 3: MODELOS SEMÁNTICOS (25-30%) =====
+  {
+    domain: 3,
+    type: "Selección múltiple",
+    text: "Tienes un warehouse en Fabric que usa Row-Level Security (RLS). Creas un modelo semántico Direct Lake que usa las tablas Delta y el RLS del warehouse. Cuando los usuarios interactúan con un reporte, ¿en qué modo operarán las consultas DAX?",
+    options: ["Direct Lake", "DirectQuery", "Import", "Dual"],
+    correct: [1],
+    explanation: "Cuando un modelo Direct Lake usa un objeto (como un warehouse) que tiene RLS habilitado, las consultas caen en modo DirectQuery (fallback) porque el motor Direct Lake no puede evaluar el RLS directamente. El fallback a DirectQuery garantiza que las reglas de seguridad se apliquen correctamente."
+  },
+  {
+    domain: 3,
+    type: "Selección múltiple",
+    text: "Necesitas prevenir que los creadores de reportes usen medidas implícitas en un modelo semántico. ¿Qué dos herramientas puedes usar para lograr esto?",
+    options: ["Microsoft Power BI Desktop", "Tabular Editor", "DAX Studio", "SSMS"],
+    correct: [0, 1],
+    explanation: "Power BI Desktop y Tabular Editor permiten deshabilitar las medidas implícitas configurando la propiedad 'Discourage Implicit Measures' en el modelo. DAX Studio y SSMS son herramientas de consulta/administración, no de configuración del modelo."
+  },
+  {
+    domain: 3,
+    type: "Selección múltiple",
+    text: "Sospechas que algunas consultas DAX en un modelo Direct Lake cargan columnas innecesarias en memoria. ¿Qué dos métodos puedes usar para identificar las columnas cargadas con frecuencia?",
+    options: [
+      "Analyze in Excel",
+      "Vertipaq Analyzer",
+      "Consultar el DMV $system.DISCOVER_STORAGE_TABLE_COLUMN_SEGMENTS",
+      "DAX Studio Query Plan"
+    ],
+    correct: [1, 2],
+    explanation: "Vertipaq Analyzer muestra qué columnas están en memoria con su tamaño. El DMV DISCOVER_STORAGE_TABLE_COLUMN_SEGMENTS permite consultar el estado del motor de almacenamiento VertiPaq/columnar para ver segmentos en memoria. Analyze in Excel no proporciona esta información de optimización."
+  },
+  {
+    domain: 3,
+    type: "Selección múltiple",
+    text: "Necesitas crear un diagrama de un modelo semántico complejo que muestre solo la tabla de hechos 'Sales' y sus tablas relacionadas. ¿Qué vista de Power BI Desktop debes usar?",
+    options: ["Data view", "Report view", "Model view", "DAX query view"],
+    correct: [2],
+    explanation: "Model view en Power BI Desktop permite visualizar las relaciones entre tablas y filtrar para mostrar solo tablas seleccionadas y sus relaciones. Puedes seleccionar la tabla Sales y sus tablas relacionadas para crear un diagrama enfocado."
+  },
+  {
+    domain: 3,
+    type: "Selección múltiple",
+    text: "¿Cuál es la diferencia principal entre Direct Lake on OneLake y Direct Lake on SQL Endpoints?",
+    options: [
+      "Direct Lake on OneLake lee directamente los archivos Delta de OneLake sin pasar por SQL; Direct Lake on SQL Endpoint usa el SQL endpoint como fuente, con fallback a DirectQuery cuando es necesario",
+      "Direct Lake on SQL Endpoint es más rápido porque usa caché del warehouse",
+      "No hay diferencia técnica, solo de nomenclatura",
+      "Direct Lake on OneLake solo funciona con lakehouses; Direct Lake on SQL Endpoint solo con warehouses"
+    ],
+    correct: [0],
+    explanation: "Direct Lake on OneLake accede directamente a los archivos Delta en OneLake para máximo rendimiento. Direct Lake on SQL Endpoint usa el SQL endpoint del warehouse/lakehouse, lo que permite heredar RLS y otras políticas de seguridad SQL, pero con fallback a DirectQuery cuando el motor encuentra construcciones que no puede procesar en modo Direct Lake."
+  },
+  {
+    domain: 3,
+    type: "Selección múltiple",
+    text: "¿Qué son los Calculation Groups en modelos semánticos de Fabric/Power BI y cuándo los debes usar?",
+    options: [
+      "Grupos de medidas organizados en carpetas de visualización para mejor usabilidad",
+      "Una forma de aplicar lógica DAX dinámica (como Time Intelligence) a múltiples medidas sin duplicar código",
+      "Un tipo especial de tabla que almacena cálculos predefinidos del warehouse",
+      "Conjuntos de columnas calculadas agrupadas por categoría de análisis"
+    ],
+    correct: [1],
+    explanation: "Los Calculation Groups permiten aplicar una misma lógica DAX (como YTD, MTD, MoM%) a múltiples medidas existentes sin crear copias. Un Calculation Item define la transformación y se aplica dinámicamente mediante un slicer en el reporte."
+  },
+  {
+    domain: 3,
+    type: "Caso de aplicación",
+    scenario: "Tienes un modelo semántico con una medida [Sales Amount]. Implementas un Calculation Group llamado 'Time Intelligence' con un Calculation Item llamado 'MTD'.",
+    text: "¿Cómo deberías escribir la expresión DAX del Calculation Item 'MTD'?",
+    options: [
+      "CALCULATE(SELECTEDMEASURE(), DATESMTD('Date'[Date]))",
+      "CALCULATE([Sales Amount], DATESMTD('Date'[Date]))",
+      "TOTALMTD(SELECTEDMEASURE(), 'Date'[Date])",
+      "CALCULATE(SUM(Sales[Amount]), MONTH('Date'[Date]))"
+    ],
+    correct: [0],
+    explanation: "En Calculation Items se usa SELECTEDMEASURE() para referirse a la medida que está siendo modificada dinámicamente. La función DATESMTD proporciona el contexto de fechas month-to-date. CALCULATE([Sales Amount]) funcionaría solo para esa medida específica, perdiendo la reutilización."
+  },
+  {
+    domain: 3,
+    type: "Selección múltiple",
+    text: "¿Cuándo debes usar Large Semantic Model Storage Format en un modelo de Fabric?",
+    options: [
+      "Cuando el modelo tiene más de 1 GB de datos comprimidos en memoria",
+      "Cuando el modelo tiene datasets que superan el límite de 10 GB del almacenamiento estándar de Power BI Premium",
+      "Siempre que uses Direct Lake mode",
+      "Solo cuando el modelo tiene más de 100 tablas"
+    ],
+    correct: [1],
+    explanation: "Large Semantic Model Storage Format permite que los modelos semánticos superen el límite de 10 GB de la configuración estándar en capacidades Power BI Premium/Fabric, habilitando modelos de cientos de GB. Se configura en las propiedades del dataset en Power BI Service."
+  },
+  {
+    domain: 3,
+    type: "Selección múltiple",
+    text: "¿Cuál es el comportamiento de 'default fallback' en un modelo Direct Lake y por qué es importante configurarlo?",
+    options: [
+      "Si Direct Lake falla, el modelo carga datos desde Import mode como respaldo",
+      "Si el motor Direct Lake no puede procesar una consulta (por RLS, tipos de datos no soportados, etc.), hace fallback a DirectQuery automáticamente para garantizar resultados correctos",
+      "Si OneLake no está disponible, Direct Lake usa caché local como respaldo",
+      "Default fallback no existe en Direct Lake; los errores simplemente devuelven resultados vacíos"
+    ],
+    correct: [1],
+    explanation: "El fallback a DirectQuery es el comportamiento de seguridad de Direct Lake: cuando el motor no puede servir una consulta completamente en modo Direct Lake, automáticamente usa DirectQuery contra el SQL endpoint. Esto garantiza resultados correctos pero con potencial impacto en rendimiento. Configurar el fallback permite controlarlo o deshabilitarlo."
+  },
+  {
+    domain: 3,
+    type: "Selección múltiple",
+    text: "Necesitas implementar un modelo compuesto (Composite Model) en Fabric. ¿Cuál es el caso de uso correcto para esto?",
+    options: [
+      "Combinar tablas en modo Import con tablas en modo DirectQuery o Direct Lake en un mismo modelo semántico",
+      "Combinar múltiples modelos semánticos en un solo reporte de Power BI",
+      "Crear un modelo que use tanto SQL como KQL como fuentes de datos",
+      "Conectar un lakehouse con un warehouse en el mismo modelo usando XMLA"
+    ],
+    correct: [0],
+    explanation: "Un Composite Model permite mezclar diferentes modos de almacenamiento en el mismo modelo: algunas tablas en Import (para dimensiones pequeñas y rendimiento máximo), otras en DirectQuery o Direct Lake (para tablas de hechos grandes o datos en tiempo real). Esto balancea rendimiento y frescura de datos."
+  },
+  {
+    domain: 3,
+    type: "Selección múltiple",
+    text: "¿Cómo se configura el Incremental Refresh en un modelo semántico de Fabric para una tabla de transacciones con columna 'OrderDate'?",
+    options: [
+      "Crear dos parámetros de Power Query tipo Date/Time llamados RangeStart y RangeEnd, filtrar la tabla con estos parámetros, y luego configurar la política de incremental refresh en Power BI Service",
+      "Usar la función CALCULATE con filtros de fecha en DAX para definir el rango incremental",
+      "Ejecutar un script de Python que divida los datos por fecha antes de cargarlos",
+      "Crear particiones manualmente en el warehouse antes de importar al modelo"
+    ],
+    correct: [0],
+    explanation: "El Incremental Refresh requiere: (1) crear parámetros Power Query RangeStart y RangeEnd tipo DateTime, (2) usar estos parámetros para filtrar la columna de fecha en la consulta M, y (3) configurar la política en Power BI Service/Fabric indicando cuántos años/meses retener y cuántos refrescar incrementalmente."
+  }
+];
+
+// State
+let mode = 'exam';
+let currentQ = 0;
+let selected = [];
+let answered = false;
+let correctCount = 0;
+let wrongCount = 0;
+let results = [];
+let timerInterval = null;
+let seconds = 0;
+
+function selectMode(m) {
+  mode = m;
+  document.getElementById('modeExam').classList.toggle('selected', m === 'exam');
+  document.getElementById('modePractice').classList.toggle('selected', m === 'practice');
+}
+
+function startQuiz() {
+  showScreen('quizScreen');
+  currentQ = 0; selected = []; answered = false;
+  correctCount = 0; wrongCount = 0; results = [];
+  seconds = 0;
+  startTimer();
+  renderQuestion();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    seconds++;
+    const m = String(Math.floor(seconds/60)).padStart(2,'0');
+    const s = String(seconds%60).padStart(2,'0');
+    document.getElementById('timerDisplay').textContent = `⏱ ${m}:${s}`;
+  }, 1000);
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function renderQuestion() {
+  const q = questions[currentQ];
+  const total = questions.length;
+  const pct = Math.round((currentQ / total) * 100);
+  const isMulti = q.correct.length > 1;
+
+  document.getElementById('qCounter').textContent = `Pregunta ${currentQ+1} de ${total}`;
+  document.getElementById('pctLabel').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('scoreCorrect').textContent = correctCount;
+  document.getElementById('scoreWrong').textContent = wrongCount;
+
+  const tag = document.getElementById('domainTag');
+  const domainLabels = ['', 'Mantener Solución', 'Preparar Datos', 'Modelos Semánticos'];
+  tag.textContent = `D${q.domain}: ${domainLabels[q.domain]}`;
+  tag.className = 'domain-tag' + (q.domain === 2 ? ' d2' : q.domain === 3 ? ' d3' : '');
+
+  let html = `<div class="q-type">// ${q.type}</div>`;
+  if (q.scenario) html += `<div class="q-scenario">${q.scenario}</div>`;
+  if (isMulti) html += `<div class="multi-note">⚠️ Selecciona ${q.correct.length} respuestas correctas</div>`;
+  html += `<div class="q-text">${q.text}</div>`;
+  html += `<div class="options">`;
+  const keys = ['A', 'B', 'C', 'D'];
+  q.options.forEach((opt, i) => {
+    html += `<button class="option" onclick="selectOption(${i})" id="opt${i}">
+      <span class="option-key" id="key${i}">${keys[i]}</span>
+      <span>${opt}</span>
+    </button>`;
+  });
+  html += `</div>`;
+  html += `<div class="explanation" id="explanation">
+    <div class="exp-title" id="expTitle">✓ EXPLICACIÓN</div>
+    <div class="exp-text">${q.explanation}</div>
+  </div>`;
+
+  document.getElementById('questionCard').innerHTML = html;
+  selected = [];
+  answered = false;
+  document.getElementById('checkBtn').style.display = 'inline-block';
+  document.getElementById('nextBtn').style.display = 'none';
+  document.getElementById('skipBtn').style.display = 'inline-block';
+}
+
+function selectOption(i) {
+  if (answered) return;
+  const q = questions[currentQ];
+  const isMulti = q.correct.length > 1;
+
+  if (isMulti) {
+    const idx = selected.indexOf(i);
+    if (idx === -1) { selected.push(i); document.getElementById(`opt${i}`).classList.add('selected'); }
+    else { selected.splice(idx,1); document.getElementById(`opt${i}`).classList.remove('selected'); }
+  } else {
+    if (selected.length > 0) document.getElementById(`opt${selected[0]}`).classList.remove('selected');
+    selected = [i];
+    document.getElementById(`opt${i}`).classList.add('selected');
+  }
+}
+
+function checkAnswer() {
+  if (selected.length === 0) return;
+  answered = true;
+  const q = questions[currentQ];
+  const isCorrect = JSON.stringify(selected.sort()) === JSON.stringify(q.correct.sort());
+
+  q.options.forEach((_, i) => {
+    const el = document.getElementById(`opt${i}`);
+    el.classList.add('disabled');
+    el.classList.remove('selected');
+    if (q.correct.includes(i) && selected.includes(i)) el.classList.add('correct');
+    else if (selected.includes(i) && !q.correct.includes(i)) el.classList.add('wrong');
+    else if (q.correct.includes(i) && !selected.includes(i)) el.classList.add('reveal-correct');
+  });
+
+  const expEl = document.getElementById('explanation');
+  const expTitle = document.getElementById('expTitle');
+  
+  if (isCorrect) {
+    correctCount++;
+    expTitle.textContent = '✓ ¡CORRECTO!';
+    expTitle.className = 'exp-title';
+  } else {
+    wrongCount++;
+    expTitle.textContent = '✗ INCORRECTO — Respuesta correcta señalada en verde';
+    expTitle.className = 'exp-title wrong-exp';
+    expEl.classList.add('wrong-exp');
+  }
+
+  if (mode === 'practice' || !isCorrect) expEl.classList.add('show');
+  else expEl.classList.add('show');
+
+  results.push({ q, selected: [...selected], isCorrect });
+
+  document.getElementById('checkBtn').style.display = 'none';
+  document.getElementById('nextBtn').style.display = 'inline-block';
+  document.getElementById('skipBtn').style.display = 'none';
+  document.getElementById('scoreCorrect').textContent = correctCount;
+  document.getElementById('scoreWrong').textContent = wrongCount;
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= questions.length) { showResults(); return; }
+  renderQuestion();
+}
+
+function skipQuestion() {
+  results.push({ q: questions[currentQ], selected: [], isCorrect: false });
+  wrongCount++;
+  currentQ++;
+  if (currentQ >= questions.length) { showResults(); return; }
+  renderQuestion();
+}
+
+function showResults() {
+  clearInterval(timerInterval);
+  showScreen('resultsScreen');
+  
+  const total = questions.length;
+  const pct = Math.round((correctCount / total) * 100);
+  const mins = Math.floor(seconds/60);
+  const secs = seconds % 60;
+
+  document.getElementById('finalPct').textContent = pct + '%';
+  document.getElementById('statCorrect').textContent = correctCount;
+  document.getElementById('statWrong').textContent = total - correctCount;
+  document.getElementById('statTime').textContent = `${mins}m ${secs}s`;
+
+  const pass = pct >= 70;
+  document.getElementById('verdictText').textContent = pct >= 85 ? '🏆 ¡Excelente!' : pass ? '✅ Aprobado' : '❌ No aprobado';
+  document.getElementById('verdictSub').textContent = pass 
+    ? `Puntuación: ${pct}% — Se requiere 70% para aprobar el DP-600` 
+    : `Puntuación: ${pct}% — Necesitas 70% o más para aprobar. ¡Sigue practicando!`;
+
+  const reviewHTML = results.map((r, i) => {
+    const domainLabels = ['', 'D1: Mantener', 'D2: Preparar Datos', 'D3: Semánticos'];
+    return `<div class="review-item">
+      <span class="review-icon">${r.isCorrect ? '✅' : '❌'}</span>
+      <div>
+        <div><strong>P${i+1}.</strong> ${r.q.text.substring(0,90)}...</div>
+        <div class="review-domain">${domainLabels[r.q.domain]}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('reviewList').innerHTML = reviewHTML;
+}
+
+function restart() {
+  seconds = 0;
+  document.getElementById('timerDisplay').textContent = '⏱ 00:00';
+  showScreen('homeScreen');
+}
+</script>
+<!-- FOOTER -->
+<footer style="
+  border-top: 1px solid #1e3a5f;
+  margin-top: 60px;
+  padding: 28px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17,24,39,0.6);
+  backdrop-filter: blur(10px);
+">
+  <!-- Wrapper centrador -->
+  <div style="display:flex;justify-content:center;width:100%;">
+  <!-- Badge + Nombre centrados -->
+  <a href="https://learn.microsoft.com/en-us/users/rafamilaneshernandez-0911/credentials/d1e971ca2e38343e?ref=https%3A%2F%2Fwww.linkedin.com%2F"
+     target="_blank"
+     title="Verificar certificación PL-300 Power BI Data Analyst Associate"
+     style="display:flex;align-items:center;gap:20px;text-decoration:none;justify-content:space-between;
+            background:rgba(255,255,255,0.04);border:1px solid #1e3a5f;
+            padding:16px 32px;border-radius:14px;transition:all 0.2s;cursor:pointer;"
+     onmouseover="this.style.borderColor='#00c2ff';this.style.background='rgba(0,194,255,0.06)'"
+     onmouseout="this.style.borderColor='#1e3a5f';this.style.background='rgba(255,255,255,0.04)'">
+
+    <!-- Badge sin fondo -->
+    <img src="data:image/png;base64,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"
+         width="70" height="70"
+         style="object-fit:contain;filter:drop-shadow(0 0 8px rgba(0,120,212,0.5));"
+         alt="Microsoft Certified PL-300"/>
+
+    <!-- Separador -->
+    <div style="width:1px;height:52px;background:#1e3a5f;flex-shrink:0;"></div>
+
+    <!-- Nombre y datos -->
+    <div style="text-align:left;">
+
+      <div style="font-family:'DM Sans',sans-serif;font-size:18px;font-weight:700;
+                  color:#e2e8f0;letter-spacing:0.3px;line-height:1.2;">Rafael Milanes Hernandez</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#00c2ff;
+                  margin-top:5px;letter-spacing:0.5px;">Microsoft Certified · Power BI Data Analyst Associate (PL-300)</div>
+    </div>
+
+  </a>  </div><!-- fin wrapper centrador -->
+</footer>
+
+</body>
+</html>
